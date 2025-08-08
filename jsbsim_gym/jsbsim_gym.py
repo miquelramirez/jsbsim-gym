@@ -90,14 +90,17 @@ class JSBSimEnv(gym.Env):
     given for crashing. It is recommended to use the PositionReward wrapper 
     below to eliminate the problem of sparse rewards.
     """
+
+    metadata = {'render_modes': ['human', 'rgb_array'], 'render_fps': 30}
+
     def __init__(self, root='.', max_episode_steps: int = 1200, render_mode: str | None = None, **kwargs: tt.Any):
         super().__init__(**kwargs)
         self.max_episode_steps = max_episode_steps
         self.render_mode = render_mode
 
         # Set observation and action space format
-        self.observation_space = gym.spaces.Box(STATE_LOW, STATE_HIGH, (15,))
-        self.action_space = gym.spaces.Box(np.array([-1,-1,-1,0]), 1, (4,))
+        self.observation_space = gym.spaces.Box(STATE_LOW, STATE_HIGH, (15,), dtype=np.float32)
+        self.action_space = gym.spaces.Box(np.array([-1,-1,-1,0]), 1, (4,), dtype=np.float32)
 
         # Initialize JSBSim
         self.simulation = jsbsim.FGFDMExec(root, None)
@@ -223,7 +226,7 @@ class JSBSimEnv(gym.Env):
 
         return obs, self._get_info()
     
-    def render(self, mode='human'):
+    def render(self) -> np.ndarray | None:
         scale = 1e-3
 
         if self.viewer is None:
@@ -279,8 +282,10 @@ class JSBSimEnv(gym.Env):
 
         self.viewer.render()
 
-        if mode == 'rgb_array':
+        if self.render_mode == 'rgb_array':
             return self.viewer.get_frame()
+
+        return None
     
     def close(self):
         if self.viewer is not None:
