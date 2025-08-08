@@ -11,7 +11,7 @@ def main() -> None:
         features_extractor_class=JSBSimFeatureExtractor
     )
 
-    env = gym.make("JSBSim-v0")
+    env = gym.make("JSBSim-v0", render_mode="rgb_array")
 
     model = SAC.load("models/jsbsim_sac", env)
 
