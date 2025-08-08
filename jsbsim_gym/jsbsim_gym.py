@@ -1,10 +1,12 @@
+import typing as tt
+
 import jsbsim
-import gym
+import gymnasium as gym
 
 import numpy as np
 
-from .visualization.rendering import Viewer, load_mesh, load_shader, RenderObject, Grid
-from .visualization.quaternion import Quaternion
+from jsbsim_gym.visualization.rendering import Viewer, load_mesh, load_shader, RenderObject, Grid
+from jsbsim_gym.visualization.quaternion import Quaternion
 
 # Initialize format for the environment state vector
 STATE_FORMAT = [
@@ -21,6 +23,8 @@ STATE_FORMAT = [
     "attitude/theta-rad",
     "attitude/psi-rad",
 ]
+
+ObsType = np.ndarray
 
 STATE_LOW = np.array([
     -np.inf,
@@ -86,8 +90,10 @@ class JSBSimEnv(gym.Env):
     given for crashing. It is recommended to use the PositionReward wrapper 
     below to eliminate the problem of sparse rewards.
     """
-    def __init__(self, root='.'):
-        super().__init__()
+    def __init__(self, root='.', max_episode_steps: int = 1200, render_mode: str | None = None, **kwargs: tt.Any):
+        super().__init__(**kwargs)
+        self.max_episode_steps = max_episode_steps
+        self.render_mode = render_mode
 
         # Set observation and action space format
         self.observation_space = gym.spaces.Box(STATE_LOW, STATE_HIGH, (15,))
@@ -101,6 +107,11 @@ class JSBSimEnv(gym.Env):
         self.simulation.load_model('f16')
         self._set_initial_conditions()
         self.simulation.run_ic()
+        # Number of steps since start
+        self.elapsed: int = 0
+
+        # Information to compute rewards
+        self.last_distance = 0.0
 
         self.down_sample = 4
         self.state = np.zeros(12)
@@ -138,8 +149,9 @@ class JSBSimEnv(gym.Env):
         # Get the JSBSim state and save to self.state
         self._get_state()
 
-        reward = 0
-        done = False
+        reward: float = 0
+        done: bool = False
+        trunc: bool = False
 
         # Check for collision with ground
         if self.state[2] < 10:
@@ -150,9 +162,30 @@ class JSBSimEnv(gym.Env):
         if np.sqrt(np.sum((self.state[:2] - self.goal[:2])**2)) < self.dg and abs(self.state[2] - self.goal[2]) < self.dg:
             reward = 10
             done = True
-        
-        return np.hstack([self.state, self.goal]), reward, done, {}
-    
+
+        # Check for time limit
+        if self.elapsed >= self.max_episode_steps:
+            trunc = True
+
+        obs = self._get_obs()
+
+        distance: float = np.linalg.norm(obs[-3:] - obs[:3])
+        reward += self.last_distance - distance
+        self.last_distance = distance
+
+        return (obs,
+                reward,
+                done,
+                trunc,
+                self._get_info())
+
+    def _get_obs(self) -> np.ndarray:
+        return np.hstack([self.state, self.goal])
+
+    def _get_info(self) -> dict[str, tt.Any]:
+        return dict(last_distance=self.last_distance,
+                    elapsed=self.elapsed)
+
     def _get_state(self):
         # Gather all state properties from JSBSim
         for i, property in enumerate(STATE_FORMAT):
@@ -161,8 +194,14 @@ class JSBSimEnv(gym.Env):
         # Rough conversion to meters. This should be fine near zero lat/long
         self.state[:2] *= RADIUS
     
-    def reset(self, seed=None):
+    def reset(self, seed: int | None = None, options: dict[str, tt.Any] | None = None) -> tuple[ObsType, dict[str, tt.Any]]:
+        if seed is None:
+            seed = 42
+        if options is None:
+            options = {}
+
         # Rerun initial conditions in JSBSim
+        self.elapsed = 0
         self.simulation.run_ic()
         self.simulation.set_property_value('propulsion/set-running', -1)
         
@@ -178,8 +217,11 @@ class JSBSimEnv(gym.Env):
 
         # Get state from JSBSim and save to self.state
         self._get_state()
+        obs: np.ndarray = self._get_obs()
+        disp: np.ndarray = obs[-3:] - obs[:3]
+        self.last_distance = np.linalg.norm(disp)
 
-        return np.hstack([self.state, self.goal])
+        return obs, self._get_info()
     
     def render(self, mode='human'):
         scale = 1e-3
@@ -245,30 +287,19 @@ class JSBSimEnv(gym.Env):
             self.viewer.close()
             self.viewer = None
 
-class PositionReward(gym.Wrapper):
+class PositionReward(gym.RewardWrapper):
     """
     This wrapper adds an additional reward to the JSBSimEnv. The agent is 
     rewarded based when movin closer to the goal and penalized when moving away.
     Staying at the same distance will result in no additional reward. The gain 
     may be set to weight the importance of this reward.
     """
-    def __init__(self, env, gain):
-        super().__init__(env)
+    def __init__(self, env, gain: float):
+        super(PositionReward, self).__init__(env)
         self.gain = gain
-    
-    def step(self, action):
-        obs, reward, done, info = super().step(action)
-        displacement = obs[-3:] - obs[:3]
-        distance = np.linalg.norm(displacement)
-        reward += self.gain * (self.last_distance - distance)
-        self.last_distance = distance
-        return obs, reward, done, info
-    
-    def reset(self):
-        obs = super().reset()
-        displacement = obs[-3:] - obs[:3]
-        self.last_distance = np.linalg.norm(displacement)
-        return obs
+
+    def reward(self, reward: tt.SupportsFloat) -> tt.SupportsFloat:
+        return self.gain * reward
 
 # Create entry point to wrapped environment
 def wrap_jsbsim(**kwargs):
