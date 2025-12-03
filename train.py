@@ -1,7 +1,6 @@
 import gymnasium as gym
-import jsbsim_gym.jsbsim_gym # This line makes sure the environment is registered
 from os import path
-from jsbsim_gym.features import JSBSimFeatureExtractor
+from features import JSBSimFeatureExtractor
 from stable_baselines3 import SAC
 
 policy_kwargs = dict(

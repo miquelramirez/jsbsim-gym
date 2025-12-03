@@ -1,4 +1,6 @@
 import numpy as np
+# Register environment
+from jsbsim_gym import JSBSimEnv
 
 import gymnasium as gym
 from time import sleep
@@ -11,7 +13,7 @@ def main() -> None:
 
     step: int = 0
 
-    env = env = gym.make("JSBSim-v0", max_episode_steps=10, render_mode="rgb_array")
+    env = JSBSimEnv(max_episode_steps=600, render_mode="rgb_array")
     obs, info = env.reset()
     render_data = env.render()
 
@@ -20,7 +22,7 @@ def main() -> None:
         mp4_writer.append_data(render_data)
         if step % 6 == 0:
             gif_writer.append_data(render_data[::2,::2,:])
-        obs, reward, done, trunc, info = env.step(np.array([0.05, -0.2, 0, .5]))
+        obs, reward, done, trunc, info = env.step(np.array([0.0, 0.0, 0, .5]))
         render_data = env.render()
         sleep(1/30)
         step += 1

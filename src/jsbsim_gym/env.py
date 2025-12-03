@@ -5,7 +5,7 @@ import gymnasium as gym
 
 import numpy as np
 
-from jsbsim_gym.visualization.rendering import Viewer, load_mesh, load_shader, RenderObject, Grid
+from jsbsim_gym.visualization.rendering import Viewer, load_mesh, RenderObject, Grid
 from jsbsim_gym.visualization.quaternion import Quaternion
 
 # Initialize format for the environment state vector
