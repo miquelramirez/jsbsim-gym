@@ -1,12 +1,28 @@
 import numpy as np
 # Register environment
 from jsbsim_gym import JSBSimEnv
+import logging
+from logging import Logger
 
 import gymnasium as gym
 from time import sleep
 import imageio as iio
 
+logger = logging.getLogger(__name__)
+
+def setup_logging(filename: str, logging_level) -> None:
+    """Create a logger to log simulation events."""
+    logging.basicConfig(
+        filename=filename,
+        filemode="w",
+        level=logging_level,
+        format="%(levelname)s - %(message)s",
+    )
+
+
 def main() -> None:
+    logging_level = logging.DEBUG if True else logging.INFO
+    setup_logging("f16_fly_level.log", logging_level)
 
     mp4_writer = iio.get_writer("video.mp4", format="ffmpeg", fps=30)
     gif_writer = iio.get_writer("video.gif", format="gif", fps=5)

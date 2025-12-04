@@ -2,6 +2,7 @@ import typing as tt
 
 import jsbsim
 import gymnasium as gym
+import logging
 
 import numpy as np
 
@@ -112,6 +113,8 @@ class JSBSimEnv(gym.Env):
         self.simulation.run_ic()
         # Number of steps since start
         self.elapsed: int = 0
+        self.delta_t: float = self.simulation.get_delta_t()
+        print("Simulation delta_t: ", self.delta_t, "s")
 
         # Information to compute rewards
         self.last_distance = 0.0
@@ -148,9 +151,15 @@ class JSBSimEnv(gym.Env):
             self.simulation.set_property_value("gear/gear-pos-norm", 0.0)
 
             self.simulation.run()
+            self.goal[0] += float(self.delta_t) * 50.0
+            self.goal[1] += float(self.delta_t) * 100.0
+            self.elapsed += self.down_sample
 
         # Get the JSBSim state and save to self.state
         self._get_state()
+        logging.info(f"t={float(self.elapsed) * self.delta_t}")
+        logging.info(f"p_goal=({self.goal})")
+        logging.info(f"p_agent=({self.state[:3]})")
 
         reward: float = 0
         done: bool = False
@@ -175,6 +184,7 @@ class JSBSimEnv(gym.Env):
         distance: float = np.linalg.norm(obs[-3:] - obs[:3])
         reward += self.last_distance - distance
         self.last_distance = distance
+        logging.info(f"reward: {reward:.2f}, distance: {distance:.2f}")
 
         return (obs,
                 reward,
@@ -252,7 +262,7 @@ class JSBSimEnv(gym.Env):
         self.f16.transform.z = x 
         self.f16.transform.x = -y
         self.f16.transform.y = z
-
+        logging.info(f"f16 transform: {self.f16.transform.matrix}")
         rot = Quaternion.from_euler(*self.state[9:])
         rot = Quaternion(rot.w, -rot.y, -rot.z, rot.x)
         self.f16.transform.rotation = rot
@@ -264,6 +274,7 @@ class JSBSimEnv(gym.Env):
         self.cylinder.transform.z = x
         self.cylinder.transform.x = -y
         self.cylinder.transform.y = z
+        logging.info(f"cylinder transform: {self.cylinder.transform.matrix}")
 
         r = self.f16.transform.position - self.cylinder.transform.position
         rhat = r/np.linalg.norm(r)
@@ -272,7 +283,8 @@ class JSBSimEnv(gym.Env):
         pitch = np.arctan2(-y, np.sqrt(x**2 + z**2))
 
 
-        self.viewer.set_view(*(r + self.cylinder.transform.position + rhat + np.array([0, .33, 0])), Quaternion.from_euler(-pitch, yaw, 0, mode=1))
+        self.viewer.set_view(*(r + self.cylinder.transform.position + rhat + np.array([0, .33, 0])),
+                             Quaternion.from_euler(-pitch, yaw, 0, mode=1))
 
 
         # print(self.f16.transform.position)
