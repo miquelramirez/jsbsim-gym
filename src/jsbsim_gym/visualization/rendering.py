@@ -180,6 +180,9 @@ class Viewer:
             pg.display.gl_set_attribute(pg.GL_CONTEXT_MINOR_VERSION, 3)
             pg.display.gl_set_attribute(pg.GL_MULTISAMPLEBUFFERS, 1)
             pg.display.gl_set_attribute(pg.GL_MULTISAMPLESAMPLES, 3)
+            # Added for compatibility in latest versions of MacOS X
+            pg.display.gl_set_attribute(pg.GL_CONTEXT_PROFILE_MASK, pg.GL_CONTEXT_PROFILE_CORE)
+            pg.display.gl_set_attribute(pg.GL_CONTEXT_FORWARD_COMPATIBLE_FLAG, True)
             self.display = pg.display.set_mode((width, height), pg.DOUBLEBUF | pg.OPENGL)
             self.ctx = mgl.create_context()
             self.clock = pg.time.Clock()
