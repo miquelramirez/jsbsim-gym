@@ -1,7 +1,7 @@
 import gymnasium as gym
-u
+
 import imageio as iio
-from features import JSBSimFeatureExtractor
+from jsbsim_gym.features import JSBSimFeatureExtractor
 from stable_baselines3 import SAC
 
 def main() -> None:

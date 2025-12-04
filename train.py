@@ -1,6 +1,6 @@
 import gymnasium as gym
 from os import path
-from features import JSBSimFeatureExtractor
+from jsbsim_gym.features import JSBSimFeatureExtractor
 from stable_baselines3 import SAC
 
 policy_kwargs = dict(
@@ -15,5 +15,5 @@ try:
     model = SAC('MlpPolicy', env, verbose=1, policy_kwargs=policy_kwargs, tensorboard_log=log_path, gradient_steps=-1, device='cuda')
     model.learn(3000000)
 finally:
-    model.save("models/jsbsim_sac")
+    model.save("models/jsbsim_sac_final")
     model.save_replay_buffer("models/jsbsim_sac_buffer")

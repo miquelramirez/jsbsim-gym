@@ -151,8 +151,8 @@ class JSBSimEnv(gym.Env):
             self.simulation.set_property_value("gear/gear-pos-norm", 0.0)
 
             self.simulation.run()
-            self.goal[0] += float(self.delta_t) * 50.0
-            self.goal[1] += float(self.delta_t) * 100.0
+            self.goal[0] += float(self.delta_t) * 500.0
+            self.goal[1] += float(self.delta_t) * 1000.0
             self.elapsed += self.down_sample
 
         # Get the JSBSim state and save to self.state
