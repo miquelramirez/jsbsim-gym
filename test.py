@@ -12,7 +12,7 @@ def main() -> None:
 
     env = gym.make("JSBSim-v0", render_mode="rgb_array")
 
-    model = SAC.load("models/jsbsim_sac", env)
+    model = SAC.load("models/jsbsim_sac_final", env)
 
     mp4_writer = iio.get_writer("video.mp4", format="ffmpeg", fps=30)
     gif_writer = iio.get_writer("video.gif", format="gif", fps=5)
